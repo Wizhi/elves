@@ -14,18 +14,22 @@ fn -shell-var [line]{
   ]
 }
 
-fn active-window []{
-  id x y width height screen name = (e:xdotool getactivewindow getwindowgeometry --shell getwindowname)
+fn window [id]{
+  name _ x y width height screen = (e:xdotool getwindowname $id getwindowgeometry --shell $id)
 
   put [
-    &id=(num (-shell-var $id)[value])
+    &name=$name
+    &id=$id
     &screen=(num (-shell-var $screen)[value])
     &x=(num (-shell-var $x)[value])
     &y=(num (-shell-var $y)[value])
     &width=(num (-shell-var $width)[value])
     &height=(num (-shell-var $height)[value])
-    &name=$name
   ]
+}
+
+fn active-window []{
+  window (e:xdotool getactivewindow)
 }
 
 fn monitors []{
