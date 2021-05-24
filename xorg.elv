@@ -14,6 +14,39 @@ fn -shell-var [line]{
   ]
 }
 
+fn -monitor-lines []{
+  e:xrandr --query | each [a]{
+    if (str:contains $a 'connected') {
+      put $a
+    }
+  }
+}
+
+fn -parse-monitor-line [line]{
+  monitor = [
+    &name=$line[0..(str:index $line ' ')]
+    &connected=(not (str:contains $line 'disconnected'))
+    &primary=(str:contains $line 'primary')
+  ]
+
+  if $monitor[connected] {
+    mode = (re:find &max=1 '(\d+)x(\d+)\+(\d+)(?:\+(\d+))?' $line)[groups]
+
+    monitor[width] = (num $mode[1][text])
+    monitor[height] = (num $mode[2][text])
+    monitor[x] = (num $mode[3][text])
+    monitor[y] = (
+      if (has-key $mode 3) {
+        num 0
+      } else {
+        num $mode[3]
+      }
+    )
+  }
+
+  put $monitor
+}
+
 fn window [id]{
   name _ x y width height screen = (e:xdotool getwindowname $id getwindowgeometry --shell $id)
 
@@ -33,30 +66,14 @@ fn active-window []{
 }
 
 fn monitors []{
-  e:xrandr --query | each [a]{
-    if (str:contains $a 'connected') {
-      monitor = [
-        &name=$a[0..(str:index $a ' ')]
-        &connected=(not (str:contains $a 'disconnected'))
-        &primary=(str:contains $a 'primary')
-      ]
+  -monitor-lines | each $-parse-monitor-line~
+}
 
-      if $monitor[connected] {
-        mode = (re:find &max=1 '(\d+)x(\d+)\+(\d+)(?:\+(\d+))?' $a)[groups]
-
-        monitor[width] = (num $mode[1][text])
-        monitor[height] = (num $mode[2][text])
-        monitor[x] = (num $mode[3][text])
-        monitor[y] = (
-          if (has-key $mode 3) {
-            num 0
-          } else {
-            num $mode[3]
-          }
-        )
-      }
-
-      put $monitor
+fn monitor [name]{
+  for monitor-line [(-monitor-lines)] {
+    if (==s $name $monitor-line[..(str:index $monitor-line ' ')]) {
+      -parse-monitor-line $monitor-line
+      return
     }
   }
 }
