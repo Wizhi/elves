@@ -55,3 +55,28 @@ fn load [&path=$file-name]{
 
     load-file $path
 }
+
+fn exec [&path=$file-name script]{
+    if (not (path:is-regular $path)) {
+        return
+    }
+
+    set env = (parse-file $path)
+    set original = (each [name]{
+        if (has-env $name) {
+            put [$name (get-env $name)]
+        }
+
+        set-env $name $env[$name]
+    } [(keys $env)] | make-map)
+
+    eval $cmd
+
+    for name [(keys $env)] {
+        if (has-key $original $name) {
+            set-env $name $original[$name]
+        } else {
+            unset-env $name
+        }
+    }
+}
